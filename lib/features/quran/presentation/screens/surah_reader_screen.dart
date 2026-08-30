@@ -21,9 +21,10 @@ import 'quran_search_screen.dart';
 /// عربية واحدة متصلة ومستمرة بلا بطاقات أو حدود، على خلفية وبألوان وحجم
 /// خط يختارها المستخدم بحرية من إعدادات القراءة (أيقونة الضبط بالأعلى).
 ///
-/// السحب مقصود أن يبقى خفيفاً: لا نُحمِّل الصفحة المجاورة مسبقاً
-/// (`allowImplicitScrolling: false`) حتى لا تُبنى فقرة سورة كاملة أثناء
-/// الإيماءة نفسها، وكل صفحة مُغلَّفة بـ RepaintBoundary لعزل إعادة الرسم.
+/// نُحمِّل الصفحة المجاورة مسبقاً (`allowImplicitScrolling: true`) حتى
+/// تُبنى فقرة السورة الثقيلة (مئات الـ WidgetSpan لسورة طويلة) قبل بدء
+/// السحب لا أثناءه، فلا يتجمّد السحب بانتظار بناء الصفحة القادمة. كل
+/// صفحة مُغلَّفة أيضاً بـ RepaintBoundary لعزل إعادة الرسم.
 class SurahReaderScreen extends ConsumerStatefulWidget {
   const SurahReaderScreen({
     super.key,
@@ -118,6 +119,7 @@ class _SurahReaderScreenState extends ConsumerState<SurahReaderScreen> {
       backgroundColor: settings.backgroundColor,
       body: PageView.builder(
         controller: _pageController,
+        allowImplicitScrolling: true,
         itemCount: 114,
         onPageChanged: (index) => setState(() => _currentSurahId = index + 1),
         itemBuilder: (context, index) {

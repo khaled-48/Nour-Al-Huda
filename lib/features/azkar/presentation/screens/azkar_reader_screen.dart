@@ -71,6 +71,7 @@ class _AzkarReaderScreenState extends ConsumerState<AzkarReaderScreen> {
           backgroundColor: settings.backgroundColor,
           body: PageView.builder(
             controller: _pageController,
+            allowImplicitScrolling: true,
             itemCount: categories.length,
             onPageChanged: (index) =>
                 setState(() => _currentCategoryId = categories[index].id),
