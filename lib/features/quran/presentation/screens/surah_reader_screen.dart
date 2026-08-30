@@ -10,6 +10,7 @@ import '../../../../core/widgets/ornate_divider.dart';
 import '../providers/quran_bookmarks_provider.dart';
 import '../providers/quran_providers.dart';
 import '../providers/quran_reader_settings_provider.dart';
+import '../widgets/page_curl_view.dart';
 import '../widgets/surah_name_banner.dart';
 import '../widgets/surah_text.dart';
 import '../widgets/tafsir_sheet.dart';
@@ -17,14 +18,10 @@ import 'quran_bookmarks_screen.dart';
 import 'quran_search_screen.dart';
 
 /// شاشة قراءة القرآن: صفحة لكل سورة (114 صفحة)، يمكن التنقّل بينها بالسحب
-/// يميناً ويساراً (PageView) تماماً كتقليب صفحات المصحف. آيات كل سورة فقرة
-/// عربية واحدة متصلة ومستمرة بلا بطاقات أو حدود، على خلفية وبألوان وحجم
-/// خط يختارها المستخدم بحرية من إعدادات القراءة (أيقونة الضبط بالأعلى).
-///
-/// نُحمِّل الصفحة المجاورة مسبقاً (`allowImplicitScrolling: true`) حتى
-/// تُبنى فقرة السورة الثقيلة (مئات الـ WidgetSpan لسورة طويلة) قبل بدء
-/// السحب لا أثناءه، فلا يتجمّد السحب بانتظار بناء الصفحة القادمة. كل
-/// صفحة مُغلَّفة أيضاً بـ RepaintBoundary لعزل إعادة الرسم.
+/// يميناً ويساراً بتأثير طيّ ورقي واقعي ([PageCurlView]) يحاكي تقليب صفحات
+/// المصحف الحقيقي. آيات كل سورة فقرة عربية واحدة متصلة ومستمرة بلا بطاقات
+/// أو حدود، على خلفية وبألوان وحجم خط يختارها المستخدم بحرية من إعدادات
+/// القراءة (أيقونة الضبط بالأعلى).
 class SurahReaderScreen extends ConsumerStatefulWidget {
   const SurahReaderScreen({
     super.key,
@@ -40,21 +37,7 @@ class SurahReaderScreen extends ConsumerStatefulWidget {
 }
 
 class _SurahReaderScreenState extends ConsumerState<SurahReaderScreen> {
-  late final PageController _pageController;
-  late int _currentSurahId;
-
-  @override
-  void initState() {
-    super.initState();
-    _currentSurahId = widget.surahId;
-    _pageController = PageController(initialPage: widget.surahId - 1);
-  }
-
-  @override
-  void dispose() {
-    _pageController.dispose();
-    super.dispose();
-  }
+  late int _currentSurahId = widget.surahId;
 
   @override
   Widget build(BuildContext context) {
@@ -117,20 +100,17 @@ class _SurahReaderScreenState extends ConsumerState<SurahReaderScreen> {
         ],
       ),
       backgroundColor: settings.backgroundColor,
-      body: PageView.builder(
-        controller: _pageController,
-        allowImplicitScrolling: true,
+      body: PageCurlView(
         itemCount: 114,
-        onPageChanged: (index) => setState(() => _currentSurahId = index + 1),
+        initialIndex: widget.surahId - 1,
+        onIndexChanged: (index) => setState(() => _currentSurahId = index + 1),
         itemBuilder: (context, index) {
           final surahId = index + 1;
-          return RepaintBoundary(
-            child: _SurahPage(
-              surahId: surahId,
-              highlightAyahNumber: surahId == widget.surahId
-                  ? widget.highlightAyahNumber
-                  : null,
-            ),
+          return _SurahPage(
+            surahId: surahId,
+            highlightAyahNumber: surahId == widget.surahId
+                ? widget.highlightAyahNumber
+                : null,
           );
         },
       ),
