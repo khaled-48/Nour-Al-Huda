@@ -236,21 +236,19 @@ class _PageCurlViewState extends State<PageCurlView>
           child: Stack(
             fit: StackFit.expand,
             children: [
+              // بلا Opacity(opacity: 0) هنا عمداً: فلاتر يتجاهل رسم أي شجرة
+              // شفافيتها صفر تماماً (تحسين أداء داخلي)، فتفشل toImage()
+              // لعدم وجود طبقة مرسومة أصلاً. الصفحة الحالية المعتمة أدناه
+              // (متأخرة في ترتيب Stack، فتُرسم فوقها) تكفي لإخفائهما بصرياً.
               if (_needsPrevBuild)
-                Opacity(
-                  opacity: 0,
-                  child: RepaintBoundary(
-                    key: _prevKey,
-                    child: widget.itemBuilder(context, _currentIndex - 1),
-                  ),
+                RepaintBoundary(
+                  key: _prevKey,
+                  child: widget.itemBuilder(context, _currentIndex - 1),
                 ),
               if (_needsNextBuild)
-                Opacity(
-                  opacity: 0,
-                  child: RepaintBoundary(
-                    key: _nextKey,
-                    child: widget.itemBuilder(context, _currentIndex + 1),
-                  ),
+                RepaintBoundary(
+                  key: _nextKey,
+                  child: widget.itemBuilder(context, _currentIndex + 1),
                 ),
               Opacity(
                 opacity: showPainter ? 0 : 1,
