@@ -1,0 +1,91 @@
+name: islamic_app
+description: "تطبيق إسلامي شامل: مواقيت الصلاة، القرآن الكريم والتفسير، الأذكار والأدعية - يعمل بالكامل بدون إنترنت."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.13.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+
+  # --- إدارة الحالة (State Management) ---
+  flutter_riverpod: ^2.6.1
+
+  # --- مواقيت الصلاة (حساب فلكي محلي بدون إنترنت) ---
+  adhan_dart: ^1.1.7
+  # الموقع الجغرافي عبر GPS الجهاز (لا يحتاج إنترنت)
+  geolocator: ^13.0.2
+  # التقويم الهجري
+  hijri: ^3.0.0
+  # بوصلة اتجاه القبلة (حساس المجال المغناطيسي بالجهاز، محلي بالكامل)
+  flutter_compass: ^0.8.1
+
+  # --- الإشعارات المحلية (تنبيه الأذان والإقامة) ---
+  flutter_local_notifications: ^18.0.1
+  timezone: ^0.9.4
+  flutter_timezone: ^5.1.0
+
+  # --- الأذونات (موقع + إشعارات) ---
+  permission_handler: ^11.3.1
+
+  # --- التصميم المتجاوب (Responsive Design) ---
+  flutter_screenutil: ^5.9.3
+
+  # --- تخزين إعدادات المستخدم (الثيم، آخر سورة تمت قراءتها، ...) ---
+  shared_preferences: ^2.3.3
+
+  # --- أدوات مساعدة ---
+  intl: ^0.20.3
+  flutter_svg: ^2.0.16
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.3
+  flutter_native_splash: ^2.4.4
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/icon/icon.png"
+  adaptive_icon_background: "#0F6E5C"
+  adaptive_icon_foreground: "assets/icon/icon_foreground.png"
+  min_sdk_android: 21
+
+flutter_native_splash:
+  color: "#0F6E5C"
+  image: assets/icon/icon_foreground.png
+  android_12:
+    image: assets/icon/icon_foreground.png
+    icon_background_color: "#0F6E5C"
+  android: true
+  ios: false
+  web: false
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/data/quran/
+    - assets/data/quran/ayahs/
+    - assets/data/quran/tafsir/
+    - assets/data/azkar/
+    - assets/images/
+    - assets/icons/
+
+  # خطوط عربية محلية: Cairo لواجهة التطبيق، Amiri Quran لنص القرآن الكريم
+  fonts:
+    - family: Cairo
+      fonts:
+        - asset: assets/fonts/Cairo-Variable.ttf
+    - family: AmiriQuran
+      fonts:
+        - asset: assets/fonts/AmiriQuran-Regular.ttf
