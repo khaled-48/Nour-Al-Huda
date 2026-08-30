@@ -10,15 +10,17 @@ import 'package:flutter/rendering.dart';
 /// مبني يدوياً بدل استخدام حزمة جاهزة لأن كل حزم "page curl" المتاحة على
 /// pub.dev تبني كل صفحات القائمة دفعة واحدة عند الفتح (قائمة widgets
 /// كاملة مسبقة البناء)، وهذا غير مناسب لعدد كبير من الصفحات الثقيلة
-/// (114 سورة، بعضها بمئات الآيات). هذا العارض يبني فقط الصفحة الحالية،
-/// ويبني الصفحة المجاورة فقط لحظة بدء السحب فعلياً نحوها (تحميل كسول
-/// حقيقي، تماماً كسلوك PageView السابق).
+/// (114 سورة، بعضها بمئات الآيات).
 ///
-/// آلية العمل: عند بدء السحب تُلتقط الصفحة الحالية والصفحة الوجهة كصورتين
-/// ثابتتين (RepaintBoundary.toImage) مرة واحدة فقط، ثم تُرسم كل حركة
-/// السحب بعد ذلك عبر CustomPainter (تحويلات بسيطة على الصورتين الجاهزتين)
-/// بلا أي إعادة بناء لمحتوى الصفحة الثقيل، فتبقى كل إطارات السحب رخيصة
-/// الحساب بغضّ النظر عن ثقل محتوى الصفحة نفسها (عدد الآيات، حجم النص...).
+/// آلية العمل: الصفحتان المجاورتان (السابقة والتالية) تُبنيان وتُلتقطان
+/// كصورتين ثابتتين (RepaintBoundary.toImage) بشكل استباقي فور استقرار
+/// الصفحة الحالية — تماماً كما كان `allowImplicitScrolling` يحمّل الجارة
+/// مسبقاً — ثم تُزالان فوراً من شجرة الودجت (تبقى الصورتان الملتقطتان
+/// فقط، لا الودجت الثقيل نفسه). لذا حين يبدأ المستخدم السحب فعلياً، لا
+/// يوجد أي انتظار لبناء الصفحة الجديدة، فقط التقاطة سريعة إضافية للصفحة
+/// الحالية المرسومة أصلاً. كل حركة السحب بعد ذلك تُرسم عبر CustomPainter
+/// (تحويلات على الصور الجاهزة فقط)، فتبقى كل إطارات السحب رخيصة الحساب
+/// بغضّ النظر عن ثقل محتوى الصفحة نفسها (عدد الآيات، حجم النص...).
 class PageCurlView extends StatefulWidget {
   const PageCurlView({
     super.key,
@@ -46,14 +48,23 @@ class _PageCurlViewState extends State<PageCurlView>
   /// نحو الصفحة التالية، سالب = رجوع للصفحة السابقة)، والقيمة المطلقة هي
   /// نسبة اكتمال الطيّ.
   double _dragT = 0;
-  int? _adjacentIndex;
   bool _dragging = false;
-  bool _capturing = false;
 
   final GlobalKey _currentKey = GlobalKey();
-  final GlobalKey _adjacentKey = GlobalKey();
+  final GlobalKey _prevKey = GlobalKey();
+  final GlobalKey _nextKey = GlobalKey();
+
   ui.Image? _currentImage;
-  ui.Image? _adjacentImage;
+  ui.Image? _prevImage;
+  ui.Image? _nextImage;
+
+  /// أثناء إعادة تخزين صور الجيران مؤقتاً تُبنى صفحاتهما (خفية بالشفافية)
+  /// لحظة الالتقاط فقط، ثم تُزال. هذا يتحكّم بذلك البناء المؤقت.
+  bool _needsPrevBuild = false;
+  bool _needsNextBuild = false;
+  bool _refreshingNeighbors = false;
+  bool _capturingCurrent = false;
+
   Size _viewportSize = Size.zero;
 
   @override
@@ -63,70 +74,107 @@ class _PageCurlViewState extends State<PageCurlView>
       vsync: this,
       duration: const Duration(milliseconds: 280),
     );
+    WidgetsBinding.instance.addPostFrameCallback((_) => _refreshNeighborCache());
   }
 
   @override
   void dispose() {
     _settleController.dispose();
     _currentImage?.dispose();
-    _adjacentImage?.dispose();
+    _prevImage?.dispose();
+    _nextImage?.dispose();
     super.dispose();
   }
 
   bool get _isRtl => Directionality.of(context) == TextDirection.rtl;
 
+  double get _capturePixelRatio =>
+      math.min(MediaQuery.of(context).devicePixelRatio, 2.0);
+
   Future<ui.Image?> _capture(GlobalKey key) async {
     final renderObject = key.currentContext?.findRenderObject();
     if (renderObject is! RenderRepaintBoundary) return null;
-    final pixelRatio = math.min(MediaQuery.of(context).devicePixelRatio, 2.5);
-    return renderObject.toImage(pixelRatio: pixelRatio);
+    return renderObject.toImage(pixelRatio: _capturePixelRatio);
   }
 
-  Future<void> _beginDrag(bool forward) async {
-    final targetIndex = _currentIndex + (forward ? 1 : -1);
-    if (targetIndex < 0 || targetIndex >= widget.itemCount) return;
-    if (_capturing) return;
+  /// يبني الصفحتين المجاورتين مؤقتاً (بشفافية صفر) ليلتقطهما، ثم يزيلهما
+  /// فوراً من الشجرة ولا يُبقي إلا الصورتين الملتقطتين.
+  Future<void> _refreshNeighborCache() async {
+    if (_refreshingNeighbors) return;
+    _refreshingNeighbors = true;
 
-    _dragging = true;
-    _capturing = true;
-    setState(() => _adjacentIndex = targetIndex);
+    final wantsPrev = _currentIndex - 1 >= 0;
+    final wantsNext = _currentIndex + 1 < widget.itemCount;
+    final capturedForIndex = _currentIndex;
 
-    // إطاران حتى تُبنى الصفحة المجاورة وتُرسم فعلياً قبل التقاطها كصورة.
+    setState(() {
+      _needsPrevBuild = wantsPrev;
+      _needsNextBuild = wantsNext;
+    });
+
     await WidgetsBinding.instance.endOfFrame;
     await WidgetsBinding.instance.endOfFrame;
-    if (!mounted || _adjacentIndex != targetIndex) return;
-
-    final current = await _capture(_currentKey);
-    final adjacent = await _capture(_adjacentKey);
-    if (!mounted || _adjacentIndex != targetIndex) {
-      current?.dispose();
-      adjacent?.dispose();
+    if (!mounted || capturedForIndex != _currentIndex) {
+      _refreshingNeighbors = false;
       return;
     }
+
+    final newPrev = wantsPrev ? await _capture(_prevKey) : null;
+    final newNext = wantsNext ? await _capture(_nextKey) : null;
+    if (!mounted || capturedForIndex != _currentIndex) {
+      newPrev?.dispose();
+      newNext?.dispose();
+      _refreshingNeighbors = false;
+      return;
+    }
+
+    _prevImage?.dispose();
+    _nextImage?.dispose();
     setState(() {
-      _currentImage = current;
-      _adjacentImage = adjacent;
-      _capturing = false;
+      _prevImage = newPrev;
+      _nextImage = newNext;
+      _needsPrevBuild = false;
+      _needsNextBuild = false;
     });
+    _refreshingNeighbors = false;
+  }
+
+  Future<void> _beginDrag() async {
+    if (_dragging || _capturingCurrent) return;
+    _dragging = true;
+    _capturingCurrent = true;
+    final captured = await _capture(_currentKey);
+    if (!mounted) return;
+    _currentImage?.dispose();
+    setState(() => _currentImage = captured);
+    _capturingCurrent = false;
   }
 
   void _onDragUpdate(double deltaFraction) {
     if (!_dragging) return;
-    setState(() => _dragT = (_dragT + deltaFraction).clamp(-1.0, 1.0));
+    final atStart = _currentIndex == 0;
+    final atEnd = _currentIndex == widget.itemCount - 1;
+    var next = _dragT + deltaFraction;
+    // لا نسمح بالسحب أبعد من حدود القائمة (لا صفحة سابقة/تالية).
+    if (next < 0 && atStart) next = 0;
+    if (next > 0 && atEnd) next = 0;
+    setState(() => _dragT = next.clamp(-1.0, 1.0));
   }
 
   Future<void> _onDragEnd(double velocityFraction) async {
     if (!_dragging) return;
     const threshold = 0.35;
     final projected = _dragT + velocityFraction * 0.15;
-    final hasTarget = _adjacentIndex != null && _currentImage != null;
-    final shouldCommit = hasTarget && projected.abs() >= threshold;
+    final target = projected >= threshold
+        ? 1.0
+        : (projected <= -threshold ? -1.0 : 0.0);
 
-    if (shouldCommit) {
-      await _animateDragTo(_dragT >= 0 ? 1.0 : -1.0);
-      _commit(_adjacentIndex!);
+    await _animateDragTo(target);
+    if (target == 1.0 && _nextImage != null) {
+      _commit(_currentIndex + 1);
+    } else if (target == -1.0 && _prevImage != null) {
+      _commit(_currentIndex - 1);
     } else {
-      await _animateDragTo(0);
       _cancel();
     }
   }
@@ -142,25 +190,20 @@ class _PageCurlViewState extends State<PageCurlView>
 
   void _commit(int newIndex) {
     _currentImage?.dispose();
-    _adjacentImage?.dispose();
     setState(() {
       _currentIndex = newIndex;
-      _adjacentIndex = null;
       _currentImage = null;
-      _adjacentImage = null;
       _dragT = 0;
       _dragging = false;
     });
     widget.onIndexChanged?.call(newIndex);
+    _refreshNeighborCache();
   }
 
   void _cancel() {
     _currentImage?.dispose();
-    _adjacentImage?.dispose();
     setState(() {
-      _adjacentIndex = null;
       _currentImage = null;
-      _adjacentImage = null;
       _dragT = 0;
       _dragging = false;
     });
@@ -168,18 +211,19 @@ class _PageCurlViewState extends State<PageCurlView>
 
   @override
   Widget build(BuildContext context) {
-    final showPainter = _currentImage != null && _adjacentImage != null;
+    final adjacentImage = _dragT >= 0 ? _nextImage : _prevImage;
+    final showPainter = _currentImage != null && adjacentImage != null && _dragT != 0;
 
     return LayoutBuilder(
       builder: (context, constraints) {
         _viewportSize = constraints.biggest;
         return GestureDetector(
+          onHorizontalDragStart: (_) {
+            if (!_dragging) unawaited(_beginDrag());
+          },
           onHorizontalDragUpdate: (details) {
             final dx = details.primaryDelta ?? 0;
             final directionalDx = _isRtl ? -dx : dx;
-            if (!_dragging && !_capturing) {
-              unawaited(_beginDrag(directionalDx > 0));
-            }
             final width = _viewportSize.width;
             if (width > 0) _onDragUpdate(directionalDx / width);
           },
@@ -192,12 +236,20 @@ class _PageCurlViewState extends State<PageCurlView>
           child: Stack(
             fit: StackFit.expand,
             children: [
-              if (_adjacentIndex != null)
+              if (_needsPrevBuild)
                 Opacity(
-                  opacity: showPainter ? 0 : 1,
+                  opacity: 0,
                   child: RepaintBoundary(
-                    key: _adjacentKey,
-                    child: widget.itemBuilder(context, _adjacentIndex!),
+                    key: _prevKey,
+                    child: widget.itemBuilder(context, _currentIndex - 1),
+                  ),
+                ),
+              if (_needsNextBuild)
+                Opacity(
+                  opacity: 0,
+                  child: RepaintBoundary(
+                    key: _nextKey,
+                    child: widget.itemBuilder(context, _currentIndex + 1),
                   ),
                 ),
               Opacity(
@@ -213,7 +265,7 @@ class _PageCurlViewState extends State<PageCurlView>
                     child: CustomPaint(
                       painter: _PageCurlPainter(
                         currentImage: _currentImage!,
-                        adjacentImage: _adjacentImage!,
+                        adjacentImage: adjacentImage,
                         dragT: _dragT,
                       ),
                     ),
