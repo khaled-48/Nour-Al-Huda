@@ -61,31 +61,33 @@ class _AzkarCategoriesScreenState extends ConsumerState<AzkarCategoriesScreen> {
                   ),
                 ),
                 Expanded(
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      final crossAxisCount = constraints.maxWidth >= 900
-                          ? 3
-                          : constraints.maxWidth >= 600
-                          ? 2
-                          : 1;
-                      return GridView.builder(
-                        padding: EdgeInsets.all(12.w),
-                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: crossAxisCount,
-                          // .w عمداً بدل .h، لنفس سبب فهرس السور: نص البطاقة
-                          // يُحجَّم بـ .sp (مقياس العرض)، فيجب أن يتبع ارتفاع
-                          // الخلية المقياس نفسه حتى لا يفيض النص عند أي نسبة
-                          // عرض إلى ارتفاع غير معتادة.
-                          mainAxisExtent: 70.w,
-                          crossAxisSpacing: 10.w,
-                          mainAxisSpacing: 10.h,
+                  child: filtered.isEmpty
+                      ? const Center(child: Text('لا توجد نتائج مطابقة.'))
+                      : LayoutBuilder(
+                          builder: (context, constraints) {
+                            final crossAxisCount = constraints.maxWidth >= 900
+                                ? 3
+                                : constraints.maxWidth >= 600
+                                ? 2
+                                : 1;
+                            return GridView.builder(
+                              padding: EdgeInsets.all(12.w),
+                              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: crossAxisCount,
+                                // .w عمداً بدل .h، لنفس سبب فهرس السور: نص البطاقة
+                                // يُحجَّم بـ .sp (مقياس العرض)، فيجب أن يتبع ارتفاع
+                                // الخلية المقياس نفسه حتى لا يفيض النص عند أي نسبة
+                                // عرض إلى ارتفاع غير معتادة.
+                                mainAxisExtent: 70.w,
+                                crossAxisSpacing: 10.w,
+                                mainAxisSpacing: 10.h,
+                              ),
+                              itemCount: filtered.length,
+                              itemBuilder: (context, index) =>
+                                  _CategoryTile(category: filtered[index]),
+                            );
+                          },
                         ),
-                        itemCount: filtered.length,
-                        itemBuilder: (context, index) =>
-                            _CategoryTile(category: filtered[index]),
-                      );
-                    },
-                  ),
                 ),
               ],
             );

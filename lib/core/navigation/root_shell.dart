@@ -66,14 +66,16 @@ class _RootShellState extends State<RootShell> {
                         .toList(),
                   ),
                 ),
-                Expanded(child: _screens[_index]),
+                Expanded(
+                  child: IndexedStack(index: _index, children: _screens),
+                ),
               ],
             ),
           );
         }
 
         return Scaffold(
-          body: _screens[_index],
+          body: IndexedStack(index: _index, children: _screens),
           bottomNavigationBar: Container(
             decoration: BoxDecoration(
               border: Border(top: BorderSide(color: AppColors.gold.withValues(alpha: 0.35))),

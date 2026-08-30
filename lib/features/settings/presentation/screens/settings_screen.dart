@@ -152,6 +152,7 @@ class SettingsScreen extends ConsumerWidget {
             ),
             trailing: IconButton(
               icon: const Icon(Icons.refresh),
+              tooltip: 'تحديث الموقع',
               onPressed: () => ref.read(locationProvider.notifier).refresh(),
             ),
           ),

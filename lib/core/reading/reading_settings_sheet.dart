@@ -66,6 +66,7 @@ class _ReadingSettingsSheet extends ConsumerWidget {
               children: [
                 IconButton(
                   icon: const Icon(Icons.text_decrease),
+                  tooltip: 'تصغير الخط',
                   onPressed: () => notifier.setFontScale(settings.fontScale - 0.1),
                 ),
                 Expanded(
@@ -80,6 +81,7 @@ class _ReadingSettingsSheet extends ConsumerWidget {
                 ),
                 IconButton(
                   icon: const Icon(Icons.text_increase),
+                  tooltip: 'تكبير الخط',
                   onPressed: () => notifier.setFontScale(settings.fontScale + 0.1),
                 ),
               ],

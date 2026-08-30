@@ -31,6 +31,7 @@ class QuranBookmarksBody extends ConsumerWidget {
           subtitle: Text('الآية ${bookmark.ayahNumber}'),
           trailing: IconButton(
             icon: const Icon(Icons.delete_outline),
+            tooltip: 'حذف العلامة المرجعية',
             onPressed: () =>
                 ref.read(quranBookmarksProvider.notifier).remove(bookmark.surahId, bookmark.ayahNumber),
           ),

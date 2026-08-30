@@ -34,6 +34,7 @@ class SurahListScreen extends ConsumerWidget {
           ),
           IconButton(
             icon: const Icon(Icons.search),
+            tooltip: 'بحث',
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const QuranSearchScreen()),
             ),

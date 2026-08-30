@@ -49,13 +49,13 @@ class NextPrayerCard extends StatelessWidget {
         children: [
           Text(
             title,
-            style: TextStyle(color: Colors.white, fontSize: 15.sp, fontWeight: FontWeight.w600),
+            style: TextStyle(color: scheme.onPrimary, fontSize: 15.sp, fontWeight: FontWeight.w600),
           ),
           SizedBox(height: 12.h),
           Text(
             TimeFormatters.countdown(countdown, numeralStyle),
             style: TextStyle(
-              color: Colors.white,
+              color: scheme.onPrimary,
               fontSize: 44.sp,
               fontWeight: FontWeight.bold,
               fontFeatures: const [FontFeature.tabularFigures()],
@@ -64,7 +64,7 @@ class NextPrayerCard extends StatelessWidget {
           SizedBox(height: 6.h),
           Text(
             'عند الساعة ${TimeFormatters.time(targetTime, timeFormat, numeralStyle)}',
-            style: TextStyle(color: Colors.white.withValues(alpha: 0.9), fontSize: 13.sp),
+            style: TextStyle(color: scheme.onPrimary.withValues(alpha: 0.9), fontSize: 13.sp),
           ),
         ],
       ),
