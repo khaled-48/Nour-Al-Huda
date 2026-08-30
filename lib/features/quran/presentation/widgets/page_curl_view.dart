@@ -223,13 +223,13 @@ class _PageCurlViewState extends State<PageCurlView>
           },
           onHorizontalDragUpdate: (details) {
             final dx = details.primaryDelta ?? 0;
-            final directionalDx = _isRtl ? -dx : dx;
+            final directionalDx = _isRtl ? dx : -dx;
             final width = _viewportSize.width;
             if (width > 0) _onDragUpdate(directionalDx / width);
           },
           onHorizontalDragEnd: (details) {
             final velocity = details.velocity.pixelsPerSecond.dx;
-            final directionalVelocity = _isRtl ? -velocity : velocity;
+            final directionalVelocity = _isRtl ? velocity : -velocity;
             final width = _viewportSize.width;
             unawaited(_onDragEnd(width > 0 ? directionalVelocity / width : 0));
           },
