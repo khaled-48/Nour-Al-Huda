@@ -2,7 +2,7 @@ name: islamic_app
 description: "تطبيق إسلامي شامل: مواقيت الصلاة، القرآن الكريم والتفسير، الأذكار والأدعية - يعمل بالكامل بدون إنترنت."
 publish_to: 'none'
 
-version: 1.0.0+1
+version: 1.1.0+2
 
 environment:
   sdk: ^3.13.2
