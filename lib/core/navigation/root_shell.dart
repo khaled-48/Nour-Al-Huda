@@ -171,11 +171,15 @@ class _TvTopNavBar extends StatelessWidget {
         border: Border(bottom: BorderSide(color: AppColors.gold, width: 1.4)),
       ),
       child: FocusTraversalGroup(
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+        // Wrap بدل Row: على شاشات التلفاز العريضة تُعرض العناصر الخمسة في
+        // سطر واحد كما هو مقصود، لكنها تلتفّ لسطر ثانٍ بدل أن تفيض خارج
+        // الشاشة إذا فُرضت واجهة التلفاز يدوياً على هاتف أضيق من الإعدادات.
+        child: Wrap(
+          alignment: WrapAlignment.center,
+          spacing: 18,
+          runSpacing: 8,
           children: [
-            for (var i = 0; i < _items.length; i++) ...[
-              if (i != 0) const SizedBox(width: 18),
+            for (var i = 0; i < _items.length; i++)
               _TvNavItem(
                 icon: _items[i].icon,
                 label: _items[i].label,
@@ -183,7 +187,6 @@ class _TvTopNavBar extends StatelessWidget {
                 autofocus: i == selectedIndex,
                 onTap: () => onSelect(i),
               ),
-            ],
           ],
         ),
       ),
