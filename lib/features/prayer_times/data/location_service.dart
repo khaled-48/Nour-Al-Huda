@@ -18,6 +18,10 @@ class LocationFailure implements Exception {
 class LocationService {
   const LocationService();
 
+  /// آخر إحداثيات محفوظة محلياً بلا أي استدعاء لـ GPS، أو null إن لم يسبق
+  /// تحديد الموقع من قبل على هذا الجهاز.
+  Future<Position?> getCachedCoordinatesOrNull() => _cachedPosition();
+
   Future<Position> getCurrentCoordinates() async {
     final serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
