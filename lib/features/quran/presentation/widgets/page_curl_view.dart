@@ -134,10 +134,21 @@ class _PageCurlViewState extends State<PageCurlView>
   double get _capturePixelRatio =>
       math.min(MediaQuery.of(context).devicePixelRatio, 2.0);
 
+  /// يُلتقط ضمن try/catch عمداً: toImage() تفترض أن الجدار مرسوم فعلاً في
+  /// الإطار الحالي (`!debugNeedsPaint`)، لكن سباقاً نادراً - خروج المستخدم
+  /// من الشاشة (زر الرجوع) بالضبط أثناء انتظار endOfFrame أعلاه، أو تغيّر
+  /// حجم الإطار في نفس اللحظة - قد يترك الجدار عالقاً بحاجة رسم رغم اجتياز
+  /// ذلك الانتظار، فترمي الدالة استثناءً بدل إعادة صورة. فشل التقاط جار
+  /// واحد ليس خطأً فادحاً هنا: الجهتان المستدعيتان أصلاً تتعاملان مع نتيجة
+  /// null بلا مشكلة (يبقى بلا تأثير طيّ لتلك الجهة حتى محاولة لاحقة ناجحة).
   Future<ui.Image?> _capture(GlobalKey key) async {
     final renderObject = key.currentContext?.findRenderObject();
     if (renderObject is! RenderRepaintBoundary) return null;
-    return renderObject.toImage(pixelRatio: _capturePixelRatio);
+    try {
+      return await renderObject.toImage(pixelRatio: _capturePixelRatio);
+    } on AssertionError {
+      return null;
+    }
   }
 
   /// يبني الصفحتين المجاورتين مؤقتاً (بشفافية صفر) ليلتقطهما، ثم يزيلهما

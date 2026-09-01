@@ -36,7 +36,7 @@ class IslamicApp extends ConsumerWidget {
       splitScreenMode: true,
       builder: (context, child) {
         return MaterialApp(
-          title: 'مُصْحَفْ وَأَذْكَارْ',
+          title: 'Nour Al-Huda',
           debugShowCheckedModeBanner: false,
           themeMode: themeMode,
           theme: AppTheme.light,
