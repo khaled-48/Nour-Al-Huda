@@ -84,8 +84,6 @@ flutter:
     - assets/data/quran/qpc_pages/
     - assets/fonts/qpc_v2/
     - assets/data/azkar/
-    - assets/images/
-    - assets/icons/
 
   # خطوط عربية محلية: Cairo لواجهة التطبيق، Amiri Quran لنص القرآن الكريم
   fonts:
