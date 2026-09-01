@@ -20,7 +20,11 @@ const List<IslamicOccasion> islamicOccasions = [
   IslamicOccasion(hijriMonth: 7, hijriDay: 27, name: 'ليلة الإسراء والمعراج'),
   IslamicOccasion(hijriMonth: 8, hijriDay: 15, name: 'ليلة النصف من شعبان'),
   IslamicOccasion(hijriMonth: 9, hijriDay: 1, name: 'بداية شهر رمضان المبارك'),
-  IslamicOccasion(hijriMonth: 9, hijriDay: 27, name: 'ليلة القدر (الأشهر عند كثير من العلماء)'),
+  IslamicOccasion(
+    hijriMonth: 9,
+    hijriDay: 27,
+    name: 'ليلة القدر (الأشهر عند كثير من العلماء)',
+  ),
   IslamicOccasion(hijriMonth: 10, hijriDay: 1, name: 'عيد الفطر المبارك'),
   IslamicOccasion(hijriMonth: 12, hijriDay: 9, name: 'يوم عرفة'),
   IslamicOccasion(hijriMonth: 12, hijriDay: 10, name: 'عيد الأضحى المبارك'),
@@ -30,7 +34,10 @@ const List<IslamicOccasion> islamicOccasions = [
 ];
 
 /// يعيد المناسبة المطابقة لهذا اليوم الهجري إن وُجدت.
-IslamicOccasion? findOccasionFor({required int hijriMonth, required int hijriDay}) {
+IslamicOccasion? findOccasionFor({
+  required int hijriMonth,
+  required int hijriDay,
+}) {
   for (final occasion in islamicOccasions) {
     if (occasion.hijriMonth == hijriMonth && occasion.hijriDay == hijriDay) {
       return occasion;

@@ -20,6 +20,11 @@ class AppConstants {
   static const String prefTvModeOverride = 'pref_tv_mode_override';
   static const String prefCityName = 'pref_city_name';
   static const String prefMosqueName = 'pref_mosque_name';
+  static const String prefTasbihCount = 'pref_tasbih_count';
+  static const String prefTasbihPhraseIndex = 'pref_tasbih_phrase_index';
+  static const String prefTasbihTarget = 'pref_tasbih_target';
+  static const String prefOngoingPrayerNotificationEnabled =
+      'pref_ongoing_prayer_notification_enabled';
 
   // مسارات بيانات القرآن الكريم والتفسير (JSON محلي ضمن الـ assets)
   static const String quranSurahsAssetPath = 'assets/data/quran/surahs.json';

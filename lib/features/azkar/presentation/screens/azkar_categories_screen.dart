@@ -4,6 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/widgets/islamic_pattern_background.dart';
+import '../../../tasbih/presentation/screens/tasbih_screen.dart';
 import '../../domain/azkar_category.dart';
 import '../providers/azkar_providers.dart';
 import 'azkar_reader_screen.dart';
@@ -25,7 +26,18 @@ class _AzkarCategoriesScreenState extends ConsumerState<AzkarCategoriesScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('الأذكار والأدعية')),
+      appBar: AppBar(
+        title: const Text('الأذكار والأدعية'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.touch_app_outlined),
+            tooltip: 'عداد التسبيح',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const TasbihScreen()),
+            ),
+          ),
+        ],
+      ),
       body: IslamicPatternBackground(
         backgroundColor: isDark
             ? AppColors.darkBackground

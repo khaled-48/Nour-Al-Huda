@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/settings/notifications_settings_provider.dart';
 import '../../../../core/settings/numeral_style.dart';
 import '../../../../core/settings/numeral_style_provider.dart';
+import '../../../../core/settings/ongoing_notification_settings_provider.dart';
 import '../../../../core/settings/time_format_option.dart';
 import '../../../../core/settings/time_format_provider.dart';
 import '../../../../core/theme/theme_provider.dart';
@@ -17,6 +18,7 @@ import '../../../prayer_times/presentation/providers/location_labels_provider.da
 import '../../../prayer_times/presentation/providers/location_provider.dart';
 import '../../../prayer_times/presentation/providers/prayer_settings_provider.dart';
 import '../../../prayer_times/presentation/widgets/edit_iqamah_offset_dialog.dart';
+import '../widgets/backup_restore_tile_group.dart';
 import 'custom_colors_screen.dart';
 
 String _themeModeLabel(ThemeMode mode) => switch (mode) {
@@ -44,6 +46,9 @@ class SettingsScreen extends ConsumerWidget {
     final timeFormat = ref.watch(timeFormatProvider);
     final numeralStyle = ref.watch(numeralStyleProvider);
     final notificationsEnabled = ref.watch(notificationsEnabledProvider);
+    final ongoingNotificationEnabled = ref.watch(
+      ongoingPrayerNotificationEnabledProvider,
+    );
     final prayerSettings = ref.watch(prayerSettingsProvider);
     final iqamahOffsets = ref.watch(iqamahOffsetsProvider);
     final locationAsync = ref.watch(locationProvider);
@@ -143,6 +148,19 @@ class SettingsScreen extends ConsumerWidget {
             value: notificationsEnabled,
             onChanged: (value) => ref
                 .read(notificationsEnabledProvider.notifier)
+                .setEnabled(value),
+          ),
+          SwitchListTile(
+            secondary: const Icon(Icons.push_pin_outlined),
+            title: const Text('إشعار دائم بالصلاة القادمة'),
+            subtitle: const Text(
+              'يبقى مثبَّتاً في شريط الإشعارات. يتحدّث عند فتح التطبيق وعند '
+              'دخول كل صلاة، لكنه قد لا يتحدّث تلقائياً عبر أكثر من صلاة '
+              'واحدة متتالية إن ظلّ التطبيق مغلقاً طوال الوقت.',
+            ),
+            value: ongoingNotificationEnabled,
+            onChanged: (value) => ref
+                .read(ongoingPrayerNotificationEnabledProvider.notifier)
                 .setEnabled(value),
           ),
           const Divider(height: 1),
@@ -253,6 +271,9 @@ class SettingsScreen extends ConsumerWidget {
               },
             );
           }),
+          const Divider(height: 1),
+          const _SectionHeader('نسخ احتياطي'),
+          const BackupRestoreTileGroup(),
         ],
       ),
     );

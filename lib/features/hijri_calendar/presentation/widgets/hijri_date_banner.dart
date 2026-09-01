@@ -8,6 +8,7 @@ import '../../../../core/settings/custom_color_settings_provider.dart';
 import '../../../../core/settings/numeral_style_provider.dart';
 import '../../../../core/utils/numeral_formatter.dart';
 import '../../domain/islamic_occasion.dart';
+import '../screens/hijri_calendar_screen.dart';
 
 /// يعرض التاريخ الهجري لليوم الحالي (وموازيه الميلادي)، مع تمييز أي مناسبة
 /// دينية توافق هذا اليوم - كل ذلك محسوب محلياً بدون إنترنت.
@@ -38,51 +39,63 @@ class HijriDateBanner extends ConsumerWidget {
     final gregorianLabel = formatNumerals(gregorianRaw, numeralStyle);
     final hijriLabel = formatNumerals(hijriRaw, numeralStyle);
 
-    return Padding(
-      padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10.r),
+        onTap: () => Navigator.of(
+          context,
+        ).push(MaterialPageRoute(builder: (_) => const HijriCalendarScreen())),
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Icon(
-                Icons.calendar_month_outlined,
-                size: 16.sp,
-                color: dateColor ?? scheme.onSurfaceVariant,
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.calendar_month_outlined,
+                    size: 16.sp,
+                    color: dateColor ?? scheme.onSurfaceVariant,
+                  ),
+                  SizedBox(width: 6.w),
+                  Text(
+                    '$hijriLabel - $gregorianLabel',
+                    style: TextStyle(
+                      fontSize: 12.5.sp,
+                      color: dateColor ?? scheme.onSurfaceVariant,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
               ),
-              SizedBox(width: 6.w),
-              Text(
-                '$hijriLabel - $gregorianLabel',
-                style: TextStyle(
-                  fontSize: 12.5.sp,
-                  color: dateColor ?? scheme.onSurfaceVariant,
+              if (occasion != null) ...[
+                SizedBox(height: 10.h),
+                Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.symmetric(
+                    vertical: 8.h,
+                    horizontal: 12.w,
+                  ),
+                  decoration: BoxDecoration(
+                    color: scheme.secondaryContainer,
+                    borderRadius: BorderRadius.circular(10.r),
+                  ),
+                  child: Text(
+                    occasion.name,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 13.sp,
+                      fontWeight: FontWeight.bold,
+                      color: scheme.onSecondaryContainer,
+                    ),
+                  ),
                 ),
-                textAlign: TextAlign.center,
-              ),
+              ],
             ],
           ),
-          if (occasion != null) ...[
-            SizedBox(height: 10.h),
-            Container(
-              width: double.infinity,
-              padding: EdgeInsets.symmetric(vertical: 8.h, horizontal: 12.w),
-              decoration: BoxDecoration(
-                color: scheme.secondaryContainer,
-                borderRadius: BorderRadius.circular(10.r),
-              ),
-              child: Text(
-                occasion.name,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 13.sp,
-                  fontWeight: FontWeight.bold,
-                  color: scheme.onSecondaryContainer,
-                ),
-              ),
-            ),
-          ],
-        ],
+        ),
       ),
     );
   }
