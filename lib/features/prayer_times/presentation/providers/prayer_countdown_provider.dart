@@ -17,6 +17,7 @@ final _clockTickProvider = StreamProvider<DateTime>((ref) async* {
 class PrayerCountdownSnapshot {
   const PrayerCountdownSnapshot({
     required this.currentPrayer,
+    required this.currentPrayerTime,
     required this.nextPrayer,
     required this.nextPrayerTime,
     required this.timeUntilNextPrayer,
@@ -26,9 +27,19 @@ class PrayerCountdownSnapshot {
   });
 
   final PrayerName currentPrayer;
+  final DateTime currentPrayerTime;
   final PrayerName nextPrayer;
   final DateTime nextPrayerTime;
   final Duration timeUntilNextPrayer;
+
+  /// نسبة الوقت المنقضي من الفترة بين أذان الصلاة الحالية والصلاة القادمة،
+  /// تُستخدم لملء القوس في الدائرة التنازلية.
+  double progressFraction(DateTime now) {
+    final total = nextPrayerTime.difference(currentPrayerTime).inSeconds;
+    if (total <= 0) return 0;
+    final elapsed = now.difference(currentPrayerTime).inSeconds;
+    return (elapsed / total).clamp(0, 1).toDouble();
+  }
 
   /// غير فارغة فقط أثناء نافذة انتظار الإقامة (بعد الأذان وقبل انقضاء مدة الإقامة).
   final PrayerName? iqamahPrayer;
@@ -75,6 +86,7 @@ final prayerCountdownProvider = Provider<AsyncValue<PrayerCountdownSnapshot>>((r
 
   return AsyncValue.data(PrayerCountdownSnapshot(
     currentPrayer: currentPrayer,
+    currentPrayerTime: currentPrayerAdhanTime,
     nextPrayer: nextPrayer,
     nextPrayerTime: nextPrayerTime,
     timeUntilNextPrayer: nextPrayerTime.difference(now),

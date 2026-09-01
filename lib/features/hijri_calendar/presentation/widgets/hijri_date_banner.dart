@@ -4,6 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hijri/hijri_calendar.dart';
 import 'package:intl/intl.dart' as intl;
 
+import '../../../../core/settings/custom_color_settings_provider.dart';
 import '../../../../core/settings/numeral_style_provider.dart';
 import '../../../../core/utils/numeral_formatter.dart';
 import '../../domain/islamic_occasion.dart';
@@ -17,16 +18,22 @@ class HijriDateBanner extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final now = DateTime.now();
     final hijri = HijriCalendar.fromDate(now);
-    final occasion = findOccasionFor(hijriMonth: hijri.hMonth, hijriDay: hijri.hDay);
+    final occasion = findOccasionFor(
+      hijriMonth: hijri.hMonth,
+      hijriDay: hijri.hDay,
+    );
     final scheme = Theme.of(context).colorScheme;
     final numeralStyle = ref.watch(numeralStyleProvider);
+    final customColors = ref.watch(customColorSettingsProvider);
+    final dateColor = customColors.enabled ? customColors.dateColor : null;
 
     // نبني التاريخ الميلادي يدوياً (بدل الاعتماد على أرقام لغة intl 'ar'
     // التي تفرض الأرقام العربية دائماً) حتى يحترم نظام الأرقام الذي
     // يختاره المستخدم، تماماً كبقية التطبيق.
     final gregorianMonthName = intl.DateFormat('MMMM', 'ar').format(now);
     final gregorianRaw = '${now.day} $gregorianMonthName ${now.year}';
-    final hijriRaw = '${hijri.hDay} ${hijri.getLongMonthName()} ${hijri.hYear} هـ';
+    final hijriRaw =
+        '${hijri.hDay} ${hijri.getLongMonthName()} ${hijri.hYear} هـ';
 
     final gregorianLabel = formatNumerals(gregorianRaw, numeralStyle);
     final hijriLabel = formatNumerals(hijriRaw, numeralStyle);
@@ -39,11 +46,18 @@ class HijriDateBanner extends ConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.calendar_month_outlined, size: 16.sp, color: scheme.onSurfaceVariant),
+              Icon(
+                Icons.calendar_month_outlined,
+                size: 16.sp,
+                color: dateColor ?? scheme.onSurfaceVariant,
+              ),
               SizedBox(width: 6.w),
               Text(
                 '$hijriLabel - $gregorianLabel',
-                style: TextStyle(fontSize: 12.5.sp, color: scheme.onSurfaceVariant),
+                style: TextStyle(
+                  fontSize: 12.5.sp,
+                  color: dateColor ?? scheme.onSurfaceVariant,
+                ),
                 textAlign: TextAlign.center,
               ),
             ],

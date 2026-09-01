@@ -8,21 +8,32 @@ import '../../../../core/settings/numeral_style_provider.dart';
 import '../../../../core/settings/time_format_option.dart';
 import '../../../../core/settings/time_format_provider.dart';
 import '../../../../core/theme/theme_provider.dart';
+import '../../../../core/tv/tv_mode.dart';
 import '../../../../core/widgets/single_choice_dialog.dart';
+import '../../../../core/widgets/text_input_dialog.dart';
 import '../../../prayer_times/domain/daily_prayer_times.dart';
 import '../../../prayer_times/domain/prayer_calculation_settings.dart';
+import '../../../prayer_times/presentation/providers/location_labels_provider.dart';
 import '../../../prayer_times/presentation/providers/location_provider.dart';
 import '../../../prayer_times/presentation/providers/prayer_settings_provider.dart';
 import '../../../prayer_times/presentation/widgets/edit_iqamah_offset_dialog.dart';
+import 'custom_colors_screen.dart';
 
 String _themeModeLabel(ThemeMode mode) => switch (mode) {
-      ThemeMode.system => 'حسب النظام',
-      ThemeMode.light => 'فاتح',
-      ThemeMode.dark => 'داكن',
-    };
+  ThemeMode.system => 'حسب النظام',
+  ThemeMode.light => 'فاتح',
+  ThemeMode.dark => 'داكن',
+};
 
-String _madhabLabel(Madhab madhab) =>
-    madhab == Madhab.shafi ? 'شافعي/مالكي/حنبلي (الظل مثل الشيء)' : 'حنفي (الظل مثلي الشيء)';
+String _madhabLabel(Madhab madhab) => madhab == Madhab.shafi
+    ? 'شافعي/مالكي/حنبلي (الظل مثل الشيء)'
+    : 'حنفي (الظل مثلي الشيء)';
+
+String _tvModeLabel(TvModeOverride option) => switch (option) {
+  TvModeOverride.auto => 'تلقائي (حسب الجهاز)',
+  TvModeOverride.forceOn => 'مُفعَّلة دائماً',
+  TvModeOverride.forceOff => 'مُعطَّلة دائماً',
+};
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -36,6 +47,8 @@ class SettingsScreen extends ConsumerWidget {
     final prayerSettings = ref.watch(prayerSettingsProvider);
     final iqamahOffsets = ref.watch(iqamahOffsetsProvider);
     final locationAsync = ref.watch(locationProvider);
+    final tvModeOverride = ref.watch(tvModeOverrideProvider);
+    final locationLabels = ref.watch(locationLabelsProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('الإعدادات')),
@@ -93,6 +106,34 @@ class SettingsScreen extends ConsumerWidget {
               }
             },
           ),
+          ListTile(
+            leading: const Icon(Icons.tv_outlined),
+            title: const Text('واجهة التلفاز (Android TV)'),
+            subtitle: Text(_tvModeLabel(tvModeOverride)),
+            onTap: () async {
+              final selected = await showSingleChoiceDialog<TvModeOverride>(
+                context: context,
+                title: 'واجهة التلفاز',
+                options: TvModeOverride.values,
+                labelBuilder: _tvModeLabel,
+                currentValue: tvModeOverride,
+              );
+              if (selected != null) {
+                ref.read(tvModeOverrideProvider.notifier).setOverride(selected);
+              }
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.palette_outlined),
+            title: const Text('تخصيص الألوان'),
+            subtitle: const Text(
+              'تحكّم منفصل بألوان النصوص، البطاقات، التاريخ، والأوقات',
+            ),
+            trailing: const Icon(Icons.chevron_left),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const CustomColorsScreen()),
+            ),
+          ),
           const Divider(height: 1),
           const _SectionHeader('الإشعارات'),
           SwitchListTile(
@@ -100,8 +141,9 @@ class SettingsScreen extends ConsumerWidget {
             title: const Text('تنبيه الأذان'),
             subtitle: const Text('إشعار محلي عند دخول وقت كل صلاة'),
             value: notificationsEnabled,
-            onChanged: (value) =>
-                ref.read(notificationsEnabledProvider.notifier).setEnabled(value),
+            onChanged: (value) => ref
+                .read(notificationsEnabledProvider.notifier)
+                .setEnabled(value),
           ),
           const Divider(height: 1),
           const _SectionHeader('مواقيت الصلاة'),
@@ -110,13 +152,14 @@ class SettingsScreen extends ConsumerWidget {
             title: const Text('طريقة حساب المواقيت'),
             subtitle: Text(prayerSettings.method.arabicLabel),
             onTap: () async {
-              final selected = await showSingleChoiceDialog<PrayerCalculationMethodOption>(
-                context: context,
-                title: 'طريقة حساب المواقيت',
-                options: PrayerCalculationMethodOption.values,
-                labelBuilder: (option) => option.arabicLabel,
-                currentValue: prayerSettings.method,
-              );
+              final selected =
+                  await showSingleChoiceDialog<PrayerCalculationMethodOption>(
+                    context: context,
+                    title: 'طريقة حساب المواقيت',
+                    options: PrayerCalculationMethodOption.values,
+                    labelBuilder: (option) => option.arabicLabel,
+                    currentValue: prayerSettings.method,
+                  );
               if (selected != null) {
                 ref.read(prayerSettingsProvider.notifier).setMethod(selected);
               }
@@ -156,6 +199,38 @@ class SettingsScreen extends ConsumerWidget {
               onPressed: () => ref.read(locationProvider.notifier).refresh(),
             ),
           ),
+          ListTile(
+            leading: const Icon(Icons.location_city_outlined),
+            title: const Text('اسم المدينة'),
+            subtitle: Text(locationLabels.cityName ?? 'غير محدَّد'),
+            onTap: () async {
+              final value = await showTextInputDialog(
+                context: context,
+                title: 'اسم المدينة',
+                initialValue: locationLabels.cityName,
+                hintText: 'مثال: الرياض',
+              );
+              if (value != null) {
+                ref.read(locationLabelsProvider.notifier).setCityName(value);
+              }
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.mosque_outlined),
+            title: const Text('اسم المسجد'),
+            subtitle: Text(locationLabels.mosqueName ?? 'غير محدَّد'),
+            onTap: () async {
+              final value = await showTextInputDialog(
+                context: context,
+                title: 'اسم المسجد',
+                initialValue: locationLabels.mosqueName,
+                hintText: 'مثال: جامع الملك خالد',
+              );
+              if (value != null) {
+                ref.read(locationLabelsProvider.notifier).setMosqueName(value);
+              }
+            },
+          ),
           const Divider(height: 1),
           const _SectionHeader('مواعيد الإقامة بعد الأذان'),
           ...PrayerName.values.where((p) => p.hasIqamah).map((prayer) {
@@ -171,7 +246,9 @@ class SettingsScreen extends ConsumerWidget {
                   currentMinutes: minutes,
                 );
                 if (newValue != null) {
-                  ref.read(iqamahOffsetsProvider.notifier).setOffset(prayer, newValue);
+                  ref
+                      .read(iqamahOffsetsProvider.notifier)
+                      .setOffset(prayer, newValue);
                 }
               },
             );
