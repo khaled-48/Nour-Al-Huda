@@ -4,15 +4,16 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import '../../../../core/reading/reading_settings_sheet.dart';
 import '../../../../core/widgets/ornate_divider.dart';
+import '../../../quran/presentation/widgets/page_curl_view.dart';
 import '../../domain/azkar_category.dart';
 import '../providers/azkar_providers.dart';
 import '../providers/azkar_reader_settings_provider.dart';
 
 /// عرض أدعية الأبواب، بابًا بابًا، مع إمكانية التنقّل بين الأبواب بالسحب
-/// يميناً ويساراً (PageView) تماماً كشاشة قراءة القرآن. لون الخلفية ولون
-/// النص وحجم الخط قابلة للتخصيص من إعدادات القراءة (أيقونة الضبط بالأعلى).
-/// النقر على أي بطاقة يزيد عدّاد مرات القراءة (يُصفَّر تلقائياً عند تغيير
-/// الباب، فهو مجرد مساعد بصري أثناء القراءة).
+/// يميناً ويساراً بتأثير طيّ ورقي واقعي ([PageCurlView]) تماماً كشاشة قراءة
+/// القرآن. لون الخلفية ولون النص وحجم الخط قابلة للتخصيص من إعدادات القراءة
+/// (أيقونة الضبط بالأعلى). النقر على أي بطاقة يزيد عدّاد مرات القراءة
+/// (يُصفَّر تلقائياً عند تغيير الباب، فهو مجرد مساعد بصري أثناء القراءة).
 class AzkarReaderScreen extends ConsumerStatefulWidget {
   const AzkarReaderScreen({super.key, required this.initialCategoryId});
 
@@ -23,26 +24,19 @@ class AzkarReaderScreen extends ConsumerStatefulWidget {
 }
 
 class _AzkarReaderScreenState extends ConsumerState<AzkarReaderScreen> {
-  late final PageController _pageController;
   late int _currentCategoryId;
 
   @override
   void initState() {
     super.initState();
     _currentCategoryId = widget.initialCategoryId;
-    _pageController = PageController(initialPage: widget.initialCategoryId - 1);
-  }
-
-  @override
-  void dispose() {
-    _pageController.dispose();
-    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final settings =
-        ref.watch(azkarReaderSettingsProvider).resolveFor(Theme.of(context).brightness);
+    final settings = ref
+        .watch(azkarReaderSettingsProvider)
+        .resolveFor(Theme.of(context).brightness);
     final categoriesAsync = ref.watch(azkarCategoriesProvider);
 
     return categoriesAsync.when(
@@ -69,17 +63,14 @@ class _AzkarReaderScreenState extends ConsumerState<AzkarReaderScreen> {
             ],
           ),
           backgroundColor: settings.backgroundColor,
-          body: PageView.builder(
-            controller: _pageController,
-            allowImplicitScrolling: true,
+          body: PageCurlView(
             itemCount: categories.length,
-            onPageChanged: (index) =>
+            semanticLabel: 'قارئ أبواب الأذكار',
+            initialIndex: widget.initialCategoryId - 1,
+            onIndexChanged: (index) =>
                 setState(() => _currentCategoryId = categories[index].id),
-            itemBuilder: (context, index) {
-              return RepaintBoundary(
-                child: _CategoryPage(category: categories[index]),
-              );
-            },
+            itemBuilder: (context, index) =>
+                _CategoryPage(category: categories[index]),
           ),
         );
       },
@@ -101,97 +92,105 @@ class _CategoryPageState extends ConsumerState<_CategoryPage> {
 
   @override
   Widget build(BuildContext context) {
-    final settings =
-        ref.watch(azkarReaderSettingsProvider).resolveFor(Theme.of(context).brightness);
+    final settings = ref
+        .watch(azkarReaderSettingsProvider)
+        .resolveFor(Theme.of(context).brightness);
     final cardColor = Color.alphaBlend(
       settings.textColor.withValues(alpha: 0.04),
       settings.backgroundColor,
     );
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final maxWidth = constraints.maxWidth >= 700
-            ? 700.0
-            : constraints.maxWidth;
-        return Center(
-          child: SizedBox(
-            width: maxWidth,
-            child: Column(
-              children: [
-                Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: 12.w,
-                    vertical: 6.h,
+    // خلفية معتمة تملأ الخلية كاملة: صفحة الباب المجاورة (السابقة/التالية)
+    // تبقى مبنيّة فعلياً خلف هذه الصفحة في نفس الـ Stack داخل PageCurlView
+    // (بلا Opacity(0) لأسباب التقاط اللقطة)، فلو تُرك أي هامش شفاف هنا
+    // (كهامش تضييق العرض على الشاشات الواسعة) لظهرت الصفحة المجاورة الحيّة.
+    return ColoredBox(
+      color: settings.backgroundColor,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final maxWidth = constraints.maxWidth >= 700
+              ? 700.0
+              : constraints.maxWidth;
+          return Center(
+            child: SizedBox(
+              width: maxWidth,
+              child: Column(
+                children: [
+                  Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 12.w,
+                      vertical: 6.h,
+                    ),
+                    child: OrnateDivider(color: settings.accentColor),
                   ),
-                  child: OrnateDivider(color: settings.accentColor),
-                ),
-                Expanded(
-                  child: ListView.builder(
-                    padding: EdgeInsets.symmetric(horizontal: 12.w),
-                    itemCount: widget.category.items.length,
-                    itemBuilder: (context, index) {
-                      final item = widget.category.items[index];
-                      return Card(
-                        color: cardColor,
-                        margin: EdgeInsets.only(bottom: 10.h),
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(12.r),
-                          onTap: () => setState(() => _counts[index]++),
-                          child: Padding(
-                            padding: EdgeInsets.all(16.w),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                Text(
-                                  item.text,
-                                  textAlign: TextAlign.justify,
-                                  textDirection: TextDirection.rtl,
-                                  style: TextStyle(
-                                    fontFamily: 'AmiriQuran',
-                                    fontSize: 18.sp * settings.fontScale,
-                                    height: 1.9,
-                                    color: settings.textColor,
-                                  ),
-                                ),
-                                if (item.footnote != null) ...[
-                                  SizedBox(height: 8.h),
+                  Expanded(
+                    child: ListView.builder(
+                      padding: EdgeInsets.symmetric(horizontal: 12.w),
+                      itemCount: widget.category.items.length,
+                      itemBuilder: (context, index) {
+                        final item = widget.category.items[index];
+                        return Card(
+                          color: cardColor,
+                          margin: EdgeInsets.only(bottom: 10.h),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(12.r),
+                            onTap: () => setState(() => _counts[index]++),
+                            child: Padding(
+                              padding: EdgeInsets.all(16.w),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
                                   Text(
-                                    item.footnote!,
+                                    item.text,
+                                    textAlign: TextAlign.justify,
                                     textDirection: TextDirection.rtl,
                                     style: TextStyle(
-                                      fontSize: 12.sp,
-                                      color: settings.accentColor,
+                                      fontFamily: 'AmiriQuran',
+                                      fontSize: 18.sp * settings.fontScale,
+                                      height: 1.9,
+                                      color: settings.textColor,
+                                    ),
+                                  ),
+                                  if (item.footnote != null) ...[
+                                    SizedBox(height: 8.h),
+                                    Text(
+                                      item.footnote!,
+                                      textDirection: TextDirection.rtl,
+                                      style: TextStyle(
+                                        fontSize: 12.sp,
+                                        color: settings.accentColor,
+                                      ),
+                                    ),
+                                  ],
+                                  SizedBox(height: 10.h),
+                                  Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: _CounterBadge(
+                                      count: _counts[index],
+                                      accent: settings.accentColor,
                                     ),
                                   ),
                                 ],
-                                SizedBox(height: 10.h),
-                                Align(
-                                  alignment: Alignment.centerLeft,
-                                  child: _CounterBadge(
-                                    count: _counts[index],
-                                    accent: settings.accentColor,
-                                  ),
-                                ),
-                              ],
+                              ),
                             ),
                           ),
-                        ),
-                      );
-                    },
+                        );
+                      },
+                    ),
                   ),
-                ),
-                Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: 12.w,
-                    vertical: 6.h,
+                  Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 12.w,
+                      vertical: 6.h,
+                    ),
+                    child: OrnateDivider(color: settings.accentColor),
                   ),
-                  child: OrnateDivider(color: settings.accentColor),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 }

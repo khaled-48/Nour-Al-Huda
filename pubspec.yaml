@@ -77,6 +77,8 @@ flutter:
     - assets/data/quran/
     - assets/data/quran/ayahs/
     - assets/data/quran/tafsir/
+    - assets/data/quran/qpc_pages/
+    - assets/fonts/qpc_v2/
     - assets/data/azkar/
     - assets/images/
     - assets/icons/
