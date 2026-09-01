@@ -21,17 +21,19 @@ import 'prayer_countdown_ring.dart';
 class NextPrayerCard extends ConsumerWidget {
   const NextPrayerCard({
     super.key,
-    required this.snapshot,
     required this.timeFormat,
     required this.numeralStyle,
   });
 
-  final PrayerCountdownSnapshot snapshot;
   final TimeFormatOption timeFormat;
   final NumeralStyle numeralStyle;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // يراقب العدّاد النابض كل ثانية هنا فقط - بطاقة واحدة صغيرة تُعاد بناؤها
+    // كل ثانية بدل الشاشة كلها (انظر توثيق highlightedPrayerProvider).
+    final snapshot = ref.watch(prayerCountdownProvider).valueOrNull;
+    if (snapshot == null) return const SizedBox.shrink();
     final isIqamah = snapshot.isWaitingForIqamah;
 
     final label = isIqamah ? 'الإقامة لصلاة' : 'الصلاة القادمة';

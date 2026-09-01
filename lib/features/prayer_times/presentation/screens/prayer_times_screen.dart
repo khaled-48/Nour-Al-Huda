@@ -31,7 +31,11 @@ class PrayerTimesScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final countdownAsync = ref.watch(prayerCountdownProvider);
+    // يراقب مواقيت اليوم (تتغيّر فقط عند تغيّر الموقع/الإعدادات) لا
+    // العدّاد النابض كل ثانية - وإلا كانت الشاشة كاملة (القائمة، الخلفية،
+    // البانر) تُعاد بناؤها كل ثانية بلا داعٍ. العدّاد الفعلي مسؤولية
+    // NextPrayerCard وحدها الآن (انظر توثيقها)، وإبراز الصلاة الحالية في
+    // القائمة يراقب highlightedPrayerProvider المُشتقّ داخل _PrayerTimesList.
     final todayAsync = ref.watch(dailyPrayerTimesProvider);
     final rawTodayAsync = ref.watch(rawDailyPrayerTimesProvider);
     final timeFormat = ref.watch(timeFormatProvider);
@@ -64,13 +68,12 @@ class PrayerTimesScreen extends ConsumerWidget {
             : AppColors.lightBackground,
         patternColor: AppColors.gold,
         child: SafeArea(
-          child: countdownAsync.when(
+          child: todayAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (error, _) => _LocationErrorView(message: error.toString()),
-            data: (snapshot) {
-              final today = todayAsync.value;
+            data: (today) {
               final rawToday = rawTodayAsync.value;
-              if (today == null || rawToday == null) {
+              if (rawToday == null) {
                 return const Center(child: CircularProgressIndicator());
               }
 
@@ -82,7 +85,6 @@ class PrayerTimesScreen extends ConsumerWidget {
                       child: _TvPrayerLayout(
                         today: today,
                         rawToday: rawToday,
-                        snapshot: snapshot,
                         timeFormat: timeFormat,
                         numeralStyle: numeralStyle,
                       ),
@@ -97,14 +99,12 @@ class PrayerTimesScreen extends ConsumerWidget {
                   final list = _PrayerTimesList(
                     today: today,
                     rawToday: rawToday,
-                    snapshot: snapshot,
                     timeFormat: timeFormat,
                     numeralStyle: numeralStyle,
                   );
                   final card = Padding(
                     padding: EdgeInsets.all(16.w),
                     child: NextPrayerCard(
-                      snapshot: snapshot,
                       timeFormat: timeFormat,
                       numeralStyle: numeralStyle,
                     ),
@@ -214,14 +214,12 @@ class _TvPrayerLayout extends ConsumerWidget {
   const _TvPrayerLayout({
     required this.today,
     required this.rawToday,
-    required this.snapshot,
     required this.timeFormat,
     required this.numeralStyle,
   });
 
   final DailyPrayerTimes today;
   final DailyPrayerTimes rawToday;
-  final PrayerCountdownSnapshot snapshot;
   final TimeFormatOption timeFormat;
   final NumeralStyle numeralStyle;
 
@@ -229,18 +227,9 @@ class _TvPrayerLayout extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final iqamahOffsets = ref.watch(iqamahOffsetsProvider);
     final adjustments = ref.watch(prayerAdjustmentsProvider);
-    final isIqamah = snapshot.isWaitingForIqamah;
-    final label = isIqamah ? 'الإقامة لصلاة' : 'الصلاة القادمة';
-    final prayerLabel = isIqamah
-        ? snapshot.iqamahPrayer!.arabicLabel
-        : snapshot.nextPrayer.arabicLabel;
-    final countdown = isIqamah
-        ? snapshot.timeUntilIqamah!
-        : snapshot.timeUntilNextPrayer;
-    final progress = snapshot.progressFraction(DateTime.now());
-    final customColors = ref.watch(customColorSettingsProvider);
-    final textColor = customColors.enabled ? customColors.textColor : null;
-    final clockColor = customColors.enabled ? customColors.clockColor : null;
+    // مشتقّ من highlightedPrayerProvider لا العدّاد الكامل - فقائمة الصلوات
+    // هنا لا تُعاد بناؤها كل ثانية (انظر توثيق المزوّد).
+    final highlighted = ref.watch(highlightedPrayerProvider);
 
     return Padding(
       padding: const EdgeInsets.all(28),
@@ -260,7 +249,7 @@ class _TvPrayerLayout extends ConsumerWidget {
                       PrayerTimeTile(
                         prayer: prayer,
                         time: today.timeOf(prayer),
-                        isCurrent: prayer == (snapshot.iqamahPrayer ?? snapshot.nextPrayer),
+                        isCurrent: prayer == highlighted,
                         iqamahOffsetMinutes: iqamahOffsets[prayer],
                         timeFormat: timeFormat,
                         numeralStyle: numeralStyle,
@@ -289,79 +278,7 @@ class _TvPrayerLayout extends ConsumerWidget {
               const SizedBox(width: 48),
               Expanded(
                 flex: 5,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    PrayerCountdownRing(progress: progress, size: 280),
-                    const SizedBox(height: 28),
-                    Text(
-                      label,
-                      style: TextStyle(
-                        color:
-                            textColor?.withValues(alpha: 0.85) ??
-                            AppColors.goldLight.withValues(alpha: 0.85),
-                        fontSize: 20,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      prayerLabel,
-                      style: TextStyle(
-                        color: clockColor ?? AppColors.goldLight,
-                        fontSize: 44,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      '${TimeFormatters.countdown(countdown, numeralStyle)} متبقٍ',
-                      style: TextStyle(
-                        color:
-                            clockColor?.withValues(alpha: 0.85) ??
-                            Colors.white70,
-                        fontSize: 22,
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    TvFocusable(
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const QiblaCompassScreen(),
-                        ),
-                      ),
-                      borderRadius: 14,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 14,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.gold.withValues(alpha: 0.14),
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.explore_outlined,
-                              color: AppColors.goldLight,
-                              size: 22,
-                            ),
-                            const SizedBox(width: 10),
-                            const Text(
-                              'اتجاه القبلة',
-                              style: TextStyle(
-                                color: AppColors.goldLight,
-                                fontSize: 18,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+                child: _TvNextPrayerPanel(numeralStyle: numeralStyle),
               ),
             ],
           ),
@@ -371,18 +288,111 @@ class _TvPrayerLayout extends ConsumerWidget {
   }
 }
 
+/// اللوحة اليمنى في واجهة التلفاز (الدائرة التنازلية + نص العدّاد + زر
+/// القبلة) - العنصر الوحيد في تلك الشاشة الذي يراقب العدّاد النابض كل
+/// ثانية مباشرة، معزولاً في ودجت صغير خاص به بدل الشاشة كاملة.
+class _TvNextPrayerPanel extends ConsumerWidget {
+  const _TvNextPrayerPanel({required this.numeralStyle});
+
+  final NumeralStyle numeralStyle;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final snapshot = ref.watch(prayerCountdownProvider).valueOrNull;
+    if (snapshot == null) return const SizedBox.shrink();
+
+    final isIqamah = snapshot.isWaitingForIqamah;
+    final label = isIqamah ? 'الإقامة لصلاة' : 'الصلاة القادمة';
+    final prayerLabel = isIqamah
+        ? snapshot.iqamahPrayer!.arabicLabel
+        : snapshot.nextPrayer.arabicLabel;
+    final countdown = isIqamah
+        ? snapshot.timeUntilIqamah!
+        : snapshot.timeUntilNextPrayer;
+    final progress = snapshot.progressFraction(DateTime.now());
+    final customColors = ref.watch(customColorSettingsProvider);
+    final textColor = customColors.enabled ? customColors.textColor : null;
+    final clockColor = customColors.enabled ? customColors.clockColor : null;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        PrayerCountdownRing(progress: progress, size: 280),
+        const SizedBox(height: 28),
+        Text(
+          label,
+          style: TextStyle(
+            color:
+                textColor?.withValues(alpha: 0.85) ??
+                AppColors.goldLight.withValues(alpha: 0.85),
+            fontSize: 20,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          prayerLabel,
+          style: TextStyle(
+            color: clockColor ?? AppColors.goldLight,
+            fontSize: 44,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Text(
+          '${TimeFormatters.countdown(countdown, numeralStyle)} متبقٍ',
+          style: TextStyle(
+            color: clockColor?.withValues(alpha: 0.85) ?? Colors.white70,
+            fontSize: 22,
+          ),
+        ),
+        const SizedBox(height: 24),
+        TvFocusable(
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const QiblaCompassScreen()),
+          ),
+          borderRadius: 14,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+            decoration: BoxDecoration(
+              color: AppColors.gold.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.explore_outlined,
+                  color: AppColors.goldLight,
+                  size: 22,
+                ),
+                const SizedBox(width: 10),
+                const Text(
+                  'اتجاه القبلة',
+                  style: TextStyle(
+                    color: AppColors.goldLight,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _PrayerTimesList extends ConsumerWidget {
   const _PrayerTimesList({
     required this.today,
     required this.rawToday,
-    required this.snapshot,
     required this.timeFormat,
     required this.numeralStyle,
   });
 
   final DailyPrayerTimes today;
   final DailyPrayerTimes rawToday;
-  final PrayerCountdownSnapshot snapshot;
   final TimeFormatOption timeFormat;
   final NumeralStyle numeralStyle;
 
@@ -394,6 +404,9 @@ class _PrayerTimesList extends ConsumerWidget {
     final cardBackground = customColors.enabled
         ? customColors.backgroundColor
         : null;
+    // مشتقّ من highlightedPrayerProvider لا العدّاد الكامل - فهذه القائمة
+    // لا تُعاد بناؤها كل ثانية (انظر توثيق المزوّد في prayer_countdown_provider).
+    final highlighted = ref.watch(highlightedPrayerProvider);
 
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
@@ -423,7 +436,7 @@ class _PrayerTimesList extends ConsumerWidget {
               PrayerTimeTile(
                 prayer: prayer,
                 time: today.timeOf(prayer),
-                isCurrent: prayer == (snapshot.iqamahPrayer ?? snapshot.nextPrayer),
+                isCurrent: prayer == highlighted,
                 iqamahOffsetMinutes: iqamahOffsets[prayer],
                 timeFormat: timeFormat,
                 numeralStyle: numeralStyle,

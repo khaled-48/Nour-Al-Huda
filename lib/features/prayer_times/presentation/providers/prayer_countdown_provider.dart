@@ -95,3 +95,16 @@ final prayerCountdownProvider = Provider<AsyncValue<PrayerCountdownSnapshot>>((r
     timeUntilIqamah: timeUntilIqamah,
   ));
 });
+
+/// الصلاة الواجب إبرازها الآن ضمن القائمة: صلاة الإقامة الجارية إن وُجدت
+/// وإلا الصلاة القادمة. مُشتقّة من [prayerCountdownProvider] النابض كل
+/// ثانية، لكنها Provider عادي يعتمد المساواة الافتراضية (==) قبل إخطار
+/// المستمعين - فقيمة [PrayerName]؟ لا تتغيّر إلا عند حدود الصلوات الفعلية
+/// (بضع مرات في اليوم)، فأي ودجت يراقب هذا المزوّد تحديداً (بدل
+/// [prayerCountdownProvider] كاملاً) لا يُعاد بناؤه كل ثانية عبثاً، خلافاً
+/// لعرض العدّاد نفسه الذي يحتاج التحديث الفعلي كل ثانية.
+final highlightedPrayerProvider = Provider<PrayerName?>((ref) {
+  final snapshot = ref.watch(prayerCountdownProvider).valueOrNull;
+  if (snapshot == null) return null;
+  return snapshot.iqamahPrayer ?? snapshot.nextPrayer;
+});
