@@ -260,7 +260,7 @@ class _TvPrayerLayout extends ConsumerWidget {
                       PrayerTimeTile(
                         prayer: prayer,
                         time: today.timeOf(prayer),
-                        isCurrent: prayer == snapshot.currentPrayer,
+                        isCurrent: prayer == (snapshot.iqamahPrayer ?? snapshot.nextPrayer),
                         iqamahOffsetMinutes: iqamahOffsets[prayer],
                         timeFormat: timeFormat,
                         numeralStyle: numeralStyle,
@@ -423,7 +423,7 @@ class _PrayerTimesList extends ConsumerWidget {
               PrayerTimeTile(
                 prayer: prayer,
                 time: today.timeOf(prayer),
-                isCurrent: prayer == snapshot.currentPrayer,
+                isCurrent: prayer == (snapshot.iqamahPrayer ?? snapshot.nextPrayer),
                 iqamahOffsetMinutes: iqamahOffsets[prayer],
                 timeFormat: timeFormat,
                 numeralStyle: numeralStyle,

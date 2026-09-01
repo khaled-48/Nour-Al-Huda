@@ -63,6 +63,13 @@ void main() {
       expect(time, DateTime(2026, 1, 1, 5, 0));
     });
 
+    test('بين الشروق والظهر: الصلاة الحالية تبقى الفجر، لا الشروق', () {
+      final times = _sample();
+      final (name, time) = times.currentPrayer(DateTime(2026, 1, 1, 9, 0));
+      expect(name, PrayerName.fajr);
+      expect(time, DateTime(2026, 1, 1, 5, 0));
+    });
+
     test('بعد عشاء اليوم: الصلاة الحالية هي عشاء اليوم نفسه', () {
       final times = _sample();
       final (name, time) = times.currentPrayer(DateTime(2026, 1, 1, 20, 0));

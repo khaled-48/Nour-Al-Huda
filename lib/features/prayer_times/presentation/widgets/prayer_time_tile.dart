@@ -22,11 +22,14 @@ IconData _iconFor(PrayerName prayer) => switch (prayer) {
 
 /// صفّ واحد ضمن قائمة مواقيت الصلاة المتصلة: أيقونة الصلاة داخل دائرة
 /// ذهبية خافتة على اليمين، الوقت على اليسار (فاصل رأسي ذهبي رفيع بينهما)،
-/// بلا حدود أو خلفية خاصة به - فقط الصلاة الحالية تُبرَز بتوهّج ذهبي خفيف
-/// وشريط جانبي، لتبدو القائمة كبطاقة متصلة واحدة كما في تصاميم مواقيت
-/// الصلاة الفاخرة بدل سلسلة بطاقات منفصلة. في وضع التلفاز ([large]) تكبر
-/// كل الخطوط والأيقونات للقراءة من بعيد، ويصبح الصفّ كاملاً قابلاً
-/// للتركيز عبر D-pad (اختياره بزر الإدخال يفتح تعديل الوقت).
+/// بلا حدود أو خلفية خاصة به - فقط الصلاة المُستهدَفة الآن ([isCurrent])
+/// تُبرَز بتوهّج ذهبي خفيف وشريط جانبي، لتبدو القائمة كبطاقة متصلة واحدة
+/// كما في تصاميم مواقيت الصلاة الفاخرة بدل سلسلة بطاقات منفصلة. الجهة
+/// المستدعية (PrayerTimesScreen) تُمرّر هنا صلاة الإقامة الجارية إن
+/// وُجدت، وإلا الصلاة القادمة - فيتحرّك الإبراز تلقائياً مع تقدّم اليوم
+/// بدل أن يبقى عالقاً على صلاة فاتت. في وضع التلفاز ([large]) تكبر كل
+/// الخطوط والأيقونات للقراءة من بعيد، ويصبح الصفّ كاملاً قابلاً للتركيز
+/// عبر D-pad (اختياره بزر الإدخال يفتح تعديل الوقت).
 class PrayerTimeTile extends ConsumerWidget {
   const PrayerTimeTile({
     super.key,
@@ -128,6 +131,7 @@ class PrayerTimeTile extends ConsumerWidget {
               child: Padding(
                 padding: EdgeInsets.symmetric(horizontal: 8.w),
                 child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
                       Icons.edit_outlined,
@@ -135,24 +139,42 @@ class PrayerTimeTile extends ConsumerWidget {
                       color: Colors.white38,
                     ),
                     SizedBox(width: 4.w),
+                    // نصان منفصلان بدل نص واحد مُلحَق برقم ("إقامة +15د"):
+                    // إلحاق حرف عربي واحد مباشرة بعد رقم بلا فاصل يُربك
+                    // خوارزمية Unicode Bidi فيُزيح الحرف بصرياً فوق النص
+                    // المجاور (مشكلة موثّقة في فلاتر). الفصل هنا يعزل كل
+                    // نص في فقرة اتجاه مستقلة فيمنع أي إعادة ترتيب بينها.
                     Text(
-                      'إقامة +$iqamahOffsetMinutesد',
+                      'إقامة',
+                      style: TextStyle(fontSize: 11.sp, color: Colors.white38),
+                    ),
+                    SizedBox(width: 3.w),
+                    Text(
+                      '+$iqamahOffsetMinutes',
+                      style: TextStyle(fontSize: 11.sp, color: Colors.white38),
+                    ),
+                    SizedBox(width: 1.w),
+                    Text(
+                      'د',
                       style: TextStyle(fontSize: 11.sp, color: Colors.white38),
                     ),
                   ],
                 ),
               ),
             ),
-          Text(
-            prayer.arabicLabel,
-            style: TextStyle(
-              fontSize: labelSize,
-              fontWeight: isCurrent ? FontWeight.bold : FontWeight.w500,
-              color:
-                  textColor ??
-                  (isCurrent
-                      ? AppColors.goldLight
-                      : Colors.white.withValues(alpha: 0.9)),
+          Flexible(
+            child: Text(
+              prayer.arabicLabel,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: labelSize,
+                fontWeight: isCurrent ? FontWeight.bold : FontWeight.w500,
+                color:
+                    textColor ??
+                    (isCurrent
+                        ? AppColors.goldLight
+                        : Colors.white.withValues(alpha: 0.9)),
+              ),
             ),
           ),
           SizedBox(width: 12.w),

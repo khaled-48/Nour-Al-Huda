@@ -103,6 +103,7 @@ class _RootShellState extends ConsumerState<RootShell> {
           body: IndexedStack(index: _index, children: _screens),
           bottomNavigationBar: Container(
             decoration: BoxDecoration(
+              color: surfaceColor,
               border: Border(top: BorderSide(color: AppColors.gold.withValues(alpha: 0.55))),
               boxShadow: [
                 BoxShadow(
@@ -112,30 +113,129 @@ class _RootShellState extends ConsumerState<RootShell> {
                 ),
               ],
             ),
-            child: NavigationBarTheme(
-              data: NavigationBarThemeData(
-                indicatorShape: const StadiumBorder(
-                  side: BorderSide(color: AppColors.gold, width: 1),
+            child: SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                child: Row(
+                  children: [
+                    for (var i = 0; i < _destinations.length; i++)
+                      _AnimatedNavItem(
+                        destination: _destinations[i],
+                        selected: i == _index,
+                        onTap: () => _onSelect(i),
+                      ),
+                  ],
                 ),
-                labelTextStyle: WidgetStateProperty.resolveWith(
-                  (states) => TextStyle(
-                    fontSize: 11,
-                    fontWeight: states.contains(WidgetState.selected) ? FontWeight.bold : FontWeight.normal,
-                    color: states.contains(WidgetState.selected) ? AppColors.goldLight : null,
-                  ),
-                ),
-              ),
-              child: NavigationBar(
-                backgroundColor: surfaceColor,
-                indicatorColor: AppColors.gold.withValues(alpha: 0.22),
-                selectedIndex: _index,
-                onDestinationSelected: _onSelect,
-                destinations: _destinations,
               ),
             ),
           ),
         );
       },
+    );
+  }
+}
+
+/// عنصر واحد ضمن شريط التنقّل السفلي، بحركات ضمنية (implicit animations)
+/// تجعل التبديل بين الأقسام يبدو حيّاً: الأيقونة تكبر وتتوهّج بظلّ ذهبي
+/// خلف حبّة (pill) خلفية تتلاشى للداخل عند الاختيار، والتسمية تتحوّل
+/// تدريجياً لخط عريض ذهبي. لا حاجة لـ AnimationController هنا: كل حركة
+/// (AnimatedContainer/AnimatedScale/AnimatedDefaultTextStyle) تُشغَّل
+/// تلقائياً كلما تغيّرت [selected] بين إعادتي بناء متتاليتين.
+class _AnimatedNavItem extends StatelessWidget {
+  const _AnimatedNavItem({
+    required this.destination,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final NavigationDestination destination;
+  final bool selected;
+  final VoidCallback onTap;
+
+  static const _duration = Duration(milliseconds: 280);
+  // Curves.easeOutBack (تأثير "قفزة" مرن) يتجاوز حدّي 0/1 مؤقتاً أثناء
+  // الحركة، وهو آمن لخاصية بلا حدّ دنيا كالـ scale، لكنه يُسقِط
+  // AnimatedContainer.boxShadow في قيمة blurRadius سالبة للحظة عند إخفاء
+  // الظلّ (١٤→٠) فيرمي استثناء "Text shadow blur radius should be
+  // non-negative" — لذا يبقى محصوراً في AnimatedScale وحده، بينما تستخدم
+  // خاصيتا الظل والنص منحنى مضبوطاً بلا تجاوز.
+  static const _curve = Curves.easeOut;
+  static const _scaleCurve = Curves.easeOutBack;
+
+  @override
+  Widget build(BuildContext context) {
+    final icon = selected
+        ? (destination.selectedIcon ?? destination.icon)
+        : destination.icon;
+
+    return Expanded(
+      child: Semantics(
+        button: true,
+        selected: selected,
+        label: destination.label,
+        child: InkWell(
+          onTap: onTap,
+          customBorder: const StadiumBorder(),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AnimatedContainer(
+                duration: _duration,
+                curve: _curve,
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
+                decoration: BoxDecoration(
+                  color: selected
+                      ? AppColors.gold.withValues(alpha: 0.22)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(20),
+                  border: selected
+                      ? Border.all(color: AppColors.gold, width: 1)
+                      : Border.all(color: Colors.transparent, width: 1),
+                  boxShadow: selected
+                      ? [
+                          BoxShadow(
+                            color: AppColors.gold.withValues(alpha: 0.45),
+                            blurRadius: 14,
+                            spreadRadius: 0.5,
+                          ),
+                        ]
+                      : const [],
+                ),
+                child: AnimatedScale(
+                  scale: selected ? 1.15 : 1.0,
+                  duration: _duration,
+                  curve: _scaleCurve,
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 180),
+                    transitionBuilder: (child, animation) =>
+                        ScaleTransition(scale: animation, child: child),
+                    child: IconTheme.merge(
+                      key: ValueKey(selected),
+                      data: IconThemeData(
+                        size: 22,
+                        color: selected ? AppColors.goldLight : null,
+                      ),
+                      child: icon,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 3),
+              AnimatedDefaultTextStyle(
+                duration: _duration,
+                curve: _curve,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+                  color: selected ? AppColors.goldLight : null,
+                ),
+                child: Text(destination.label),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

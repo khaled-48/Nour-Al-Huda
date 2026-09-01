@@ -48,12 +48,17 @@ class DailyPrayerTimes {
     return (PrayerName.fajr, tomorrowFajr);
   }
 
-  /// الصلاة الحالية (آخر صلاة دخل وقتها) مع وقت أذانها الفعلي. قبل دخول وقت
-  /// فجر اليوم تكون الصلاة الحالية هي عشاء الأمس بوقته الصحيح (وليس عشاء اليوم).
+  /// الصلاة الحالية (آخر صلاة *تُقام* دخل وقتها) مع وقت أذانها الفعلي. قبل
+  /// دخول وقت فجر اليوم تكون الصلاة الحالية هي عشاء الأمس بوقته الصحيح
+  /// (وليس عشاء اليوم). الشروق مستثنى عمداً من هذا الحساب رغم وجوده ضمن
+  /// [PrayerName.values]: فهو ليس صلاة تُقام لها جماعة ([PrayerNameLabel.hasIqamah])،
+  /// فلا يصحّ اعتباره "الصلاة الحالية" بين وقته ووقت الظهر - كان هذا يجعل
+  /// الصلاة الحالية تُقرأ خطأً كـ"الشروق" لنحو ٦ ساعات كل صباح.
   PrayerOccurrence currentPrayer(DateTime now) {
     PrayerName current = PrayerName.isha;
     DateTime currentTime = yesterdayIsha;
     for (final prayer in PrayerName.values) {
+      if (!prayer.hasIqamah) continue;
       final time = times[prayer]!;
       if (!time.isAfter(now)) {
         current = prayer;
